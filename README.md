@@ -2,7 +2,17 @@ Template
 -------
 
 Create config files from templates files using environment variables as
-context.
+context. This will be very helpful for the creation of config files inside
+docker containers that only have environment variables available to them,
+
+# Installation
+
+```bash
+wget https://github.com/erroneousboat/template/raw/master/bin/template
+chmod +x template
+```
+
+# Usage
 
 ```bash
 # Usage: template [TEMPLATE FILE]:[CONFIG FILE]
