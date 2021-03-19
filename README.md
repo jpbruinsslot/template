@@ -10,13 +10,12 @@ Installation
 
 ```
 $ go get -u github.com/erroneousboat/template
-
 ```
 
 #### Via Docker:
 
 ```
-
+$ docker run --rm -it erroneousboat/template
 ```
 
 
