@@ -1,25 +1,116 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"text/template"
 )
 
 const (
-	usage = `Usage: template [TEMPLATE FILE]:[CONFIG FILE]`
+	VERSION = "0.1.0"
+	USAGE   = `NAME: 
+    template - use environment variables in Go templates
+
+USAGE:
+    template -i [input-file] -o [output-file]
+
+EXAMPLES:
+
+    $ template -i input.tpml -o output.txt
+
+    $ echo "{{ .PWD }}" | template -o output.txt
+
+    $ echo "{{ .PWD }}" | template
+
+    $ template -i input.tmpl > output.txt
+
+VERSION:
+    %s
+
+WEBSITE:
+    https://github.com/erroneousboat/template		
+
+GLOBAL OPTIONS:
+    -i, -input [input-file]     input file
+    -o, -output [output-file]   output file
+    -h, -help
+`
 )
 
-type Context struct {
+var (
+	flgInput  string
+	flgOutput string
+)
+
+func init() {
+	flag.StringVar(
+		&flgInput,
+		"i",
+		"",
+		"input file",
+	)
+
+	flag.StringVar(
+		&flgInput,
+		"input",
+		"",
+		"input file",
+	)
+
+	flag.StringVar(
+		&flgOutput,
+		"o",
+		"",
+		"output file",
+	)
+
+	flag.StringVar(
+		&flgOutput,
+		"output",
+		"",
+		"output file",
+	)
+
+	flag.Usage = func() {
+		fmt.Printf(USAGE, VERSION)
+	}
+
 }
 
-// Env returns a map with environment variables.
-// These can be referenced from a template file by using the
-// following notation: {{ .Env.SHELL }}
-func (c *Context) Env() map[string]string {
+func main() {
+	flag.Parse()
+
+	var err error
+
+	var r io.Reader
+	if flgInput != "" {
+		r, err = os.Open(flgInput)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		r = os.Stdin
+	}
+
+	var fp *os.File
+	if flgOutput != "" {
+		fp, err = os.Create(flgOutput)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer fp.Close()
+	} else {
+		fp = os.Stdout
+	}
+
+	Substitute(r, fp)
+}
+
+func Env() map[string]string {
 	env := make(map[string]string)
 	for _, i := range os.Environ() {
 		sep := strings.Index(i, "=")
@@ -28,46 +119,21 @@ func (c *Context) Env() map[string]string {
 	return env
 }
 
-func main() {
-	args := os.Args[1:]
-
-	if len(args) == 0 || args[0] == "-h" {
-		fmt.Println(usage)
-	} else {
-		src, dst := parseArgs(args)
-		generateFile(src, dst)
-	}
-}
-
-// parseArgs will parse the arguments given from the cli
-// format will be source_file.tmpl > dest_file.conf
-func parseArgs(args []string) (string, string) {
-	strs := strings.Split(args[0], ":")
-	if len(strs) != 2 {
-		log.Fatalf("malformed arguments: %s. expected src.tmpl > dst.conf", args)
-	}
-	return strs[0], strs[1]
-}
-
-// generateFile will generate a file (dstPath) given a template (srcPath)
-func generateFile(srcPath, dstPath string) bool {
-	tmpl, err := template.New(filepath.Base(srcPath)).ParseFiles(srcPath)
+func Substitute(r io.Reader, w io.Writer) error {
+	b, err := io.ReadAll(r)
 	if err != nil {
-		log.Fatalf("parsing: %s", err)
+		return err
 	}
 
-	dstFile := os.Stdout
-	if dstPath != "" {
-		if dstFile, err = os.Create(dstPath); err != nil {
-			log.Fatalf("creating file: %s", err)
-		}
-		defer dstFile.Close()
-	}
-
-	err = tmpl.ExecuteTemplate(dstFile, filepath.Base(srcPath), &Context{})
+	tmpl, err := template.New("template").Parse(string(b))
 	if err != nil {
-		log.Fatalf("template error: %s", err)
+		return err
 	}
 
-	return true
+	err = tmpl.Execute(w, Env())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -1,0 +1,1 @@
+{{ .PWD }} run -i template
