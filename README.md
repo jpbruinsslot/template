@@ -42,10 +42,10 @@ EXAMPLES:
     $ template -i input.tmpl > output.txt
 
 VERSION:
-        0.1.0
+    0.1.0
 
 WEBSITE:
-        https://github.com/erroneousboat/template
+    https://github.com/erroneousboat/template
 
 GLOBAL OPTIONS:
     -i, -input [input-file]     input file
