@@ -58,7 +58,7 @@ WEBSITE:
 
 GLOBAL OPTIONS:
     -t, -template [template-file]     template file
-    -o, -output [output-file]   	  output file
-	-d, -data [data-file]	    	  data file
+    -o, -output [output-file]         output file
+    -d, -data [data-file]             data file
     -h, -help
 ```
