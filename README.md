@@ -29,26 +29,29 @@ NAME:
     template - use environment variables in Go templates
 
 USAGE:
-    template -i [input-file] -o [output-file]
+    template -t [template-file] -o [output-file] -d [data-file]
 
 EXAMPLES:
 
-    $ template -i input.tpml -o output.txt
+    $ template -t input.tpml -o output.txt
+
+    $ template -t input.tpml -o output.txt -d data.json
 
     $ echo "{{ .PWD }}" | template -o output.txt
 
     $ echo "{{ .PWD }}" | template
 
-    $ template -i input.tmpl > output.txt
+    $ template -t input.tmpl > output.txt
 
 VERSION:
-    0.1.0
+    0.2.0
 
 WEBSITE:
-    https://github.com/erroneousboat/template
+    https://github.com/erroneousboat/template		
 
 GLOBAL OPTIONS:
-    -i, -input [input-file]     input file
-    -o, -output [output-file]   output file
+    -t, -template [template-file]     template file
+    -o, -output [output-file]   	  output file
+	-d, -data [data-file]	    	  data file
     -h, -help
 ```

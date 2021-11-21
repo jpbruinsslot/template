@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -8,25 +11,35 @@ import (
 	"os"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 )
 
 const (
-	VERSION = "0.1.0"
+	VERSION = "0.2.0"
 	USAGE   = `NAME: 
     template - use environment variables in Go templates
 
 USAGE:
-    template -i [input-file] -o [output-file]
+    template -t [template-file] -o [output-file] -d [data-file]
 
 EXAMPLES:
 
-    $ template -i input.tpml -o output.txt
+	# Use system wide environment variables
+    $ template -t input.tpml -o output.txt
+    $ template -t input.tmpl > output.txt
 
-    $ echo "{{ .PWD }}" | template -o output.txt
+	# Use data files (support for env and json files)
+    $ template -t input.tpml -o output.txt -d data.env
+    $ template -t input.tpml -o output.txt -d data.json
 
-    $ echo "{{ .PWD }}" | template
+	# Use stdin for template file
+    $ cat input.tmpl | template -o output.txt    # output txt file
+	$ cat input.tmpl | template -o -             # output to stdout
+    $ cat input.tmpl | template                  # output to stdout
 
-    $ template -i input.tmpl > output.txt
+	# Use stdin for data file
+	$ cat data.env | template -t input.tmpl -o output.txt -d -  # output txt file
+	$ cat data.env | template -t input.tmpl -d -                # output to stdout
 
 VERSION:
     %s
@@ -35,8 +48,9 @@ WEBSITE:
     https://github.com/erroneousboat/template		
 
 GLOBAL OPTIONS:
-    -i, -input [input-file]     input file
-    -o, -output [output-file]   output file
+    -t, -template [template-file]    template file
+    -o, -output [output-file]        output file
+	-d, -data [data-file]            data file
     -h, -help
 `
 )
@@ -44,21 +58,22 @@ GLOBAL OPTIONS:
 var (
 	flgInput  string
 	flgOutput string
+	flgData   string
 )
 
 func init() {
 	flag.StringVar(
 		&flgInput,
-		"i",
+		"t",
 		"",
-		"input file",
+		"template file",
 	)
 
 	flag.StringVar(
 		&flgInput,
-		"input",
+		"template",
 		"",
-		"input file",
+		"template file",
 	)
 
 	flag.StringVar(
@@ -75,10 +90,23 @@ func init() {
 		"output file",
 	)
 
+	flag.StringVar(
+		&flgData,
+		"d",
+		"",
+		"data file",
+	)
+
+	flag.StringVar(
+		&flgData,
+		"data",
+		"",
+		"data file",
+	)
+
 	flag.Usage = func() {
 		fmt.Printf(USAGE, VERSION)
 	}
-
 }
 
 func main() {
@@ -86,32 +114,119 @@ func main() {
 
 	var err error
 
-	var r io.Reader
-	if flgInput != "" {
-		r, err = os.Open(flgInput)
+	var tmpl io.Reader
+	if flgInput == "-" {
+		tmpl = os.Stdin
+	} else if flgInput != "" {
+		tmpl, err = os.Open(flgInput)
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		r = os.Stdin
+		tmpl = os.Stdin
 	}
 
-	var fp *os.File
-	if flgOutput != "" {
-		fp, err = os.Create(flgOutput)
+	var output *os.File
+	if flgOutput == "-" {
+		output = os.Stdout
+	} else if flgOutput != "" {
+		output, err = os.Create(flgOutput)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer fp.Close()
+		defer output.Close()
 	} else {
-		fp = os.Stdout
+		output = os.Stdout
 	}
 
-	Substitute(r, fp)
+	var df map[string]interface{}
+	if flgData == "-" {
+		df, err = DataFile(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if flgData != "" {
+		fp, err := os.Open(flgData)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		df, err = DataFile(fp)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		df = Env()
+	}
+
+	Substitute(tmpl, output, df)
 }
 
-func Env() map[string]string {
-	env := make(map[string]string)
+func DataFile(r io.Reader) (map[string]interface{}, error) {
+	data := make(map[string]interface{})
+
+	r, isJSON, err := isJSON(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if isJSON {
+		err = json.NewDecoder(r).Decode(&data)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
+	}
+
+	r, isENV, err := isEnv(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if isENV {
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			line := scanner.Text()
+			sep := strings.Index(line, "=")
+
+			if sep < 0 {
+				return nil, fmt.Errorf("invalid line: %s", line)
+			}
+
+			data[line[0:sep]] = line[sep+1:]
+		}
+		return data, nil
+	}
+
+	return nil, fmt.Errorf("unknown data format")
+}
+
+func isJSON(r io.Reader) (io.Reader, bool, error) {
+	buf := make([]byte, 1)
+
+	n, err := io.ReadAtLeast(r, buf[:], len(buf))
+	if err != nil {
+		return nil, false, err
+	}
+
+	isJSON := bytes.HasPrefix(buf, []byte("{"))
+	return io.MultiReader(bytes.NewReader(buf[:n]), r), isJSON, nil
+}
+
+func isEnv(r io.Reader) (io.Reader, bool, error) {
+	buf := make([]byte, 3)
+
+	n, err := io.ReadAtLeast(r, buf[:], len(buf))
+	if err != nil {
+		return nil, false, err
+	}
+
+	isENV := utf8.Valid(buf)
+	return io.MultiReader(bytes.NewReader(buf[:n]), r), isENV, nil
+}
+
+func Env() map[string]interface{} {
+	env := make(map[string]interface{})
 	for _, i := range os.Environ() {
 		sep := strings.Index(i, "=")
 		env[i[0:sep]] = i[sep+1:]
@@ -119,7 +234,7 @@ func Env() map[string]string {
 	return env
 }
 
-func Substitute(r io.Reader, w io.Writer) error {
+func Substitute(r io.Reader, w io.Writer, df map[string]interface{}) error {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return err
@@ -130,7 +245,7 @@ func Substitute(r io.Reader, w io.Writer) error {
 		return err
 	}
 
-	err = tmpl.Execute(w, Env())
+	err = tmpl.Execute(w, df)
 	if err != nil {
 		return err
 	}
