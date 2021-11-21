@@ -6,6 +6,12 @@ Use environment variables in Go templates.
 Installation
 ------------
 
+#### Binary installation
+
+[Download](https://github.com/erroneousboat/template/releases) a
+compatible binary for your system. For convenience, place `template` in a
+directory where you can access it from the command line.
+
 #### Via Go:
 
 ```
@@ -15,9 +21,9 @@ $ go get -u github.com/erroneousboat/template
 #### Via Docker:
 
 ```
+$ docker build -t erroneousboat/template .
 $ docker run --rm -it erroneousboat/template
 ```
-
 
 Usage
 -----
