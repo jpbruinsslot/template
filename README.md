@@ -8,21 +8,14 @@ Installation
 
 #### Binary installation
 
-[Download](https://github.com/erroneousboat/template/releases) a
+[Download](https://github.com/jpbruinsslot/template/releases) a
 compatible binary for your system. For convenience, place `template` in a
 directory where you can access it from the command line.
 
 #### Via Go:
 
 ```
-$ go get -u github.com/erroneousboat/template
-```
-
-#### Via Docker:
-
-```
-$ docker build -t erroneousboat/template .
-$ docker run --rm -it erroneousboat/template
+$ go get -u github.com/jpbruinsslot/template
 ```
 
 Usage
@@ -32,7 +25,7 @@ Usage
 
 ```
 NAME:
-    template - use environment variables in Go templates
+    template - use environment variables and data files (like .env) in Go templates
 
 USAGE:
     template -t [template-file] -o [output-file] -d [data-file]
@@ -48,19 +41,19 @@ EXAMPLES:
     $ template -t input.tpml -o output.txt -d data.json
 
     # Use stdin for template file
-    $ cat input.tmpl | template -o output.txt    # output txt file
-    $ cat input.tmpl | template -o -             # output to stdout
-    $ cat input.tmpl | template                  # output to stdout
+    $ cat input.tmpl | template -o output.txt                   # output txt file
+    $ cat input.tmpl | template -o -                            # output to stdout
+    $ cat input.tmpl | template                                 # output to stdout
 
     # Use stdin for data file
     $ cat data.env | template -t input.tmpl -o output.txt -d -  # output txt file
     $ cat data.env | template -t input.tmpl -d -                # output to stdout
 
 VERSION:
-    0.2.0
+    0.2.1
 
 WEBSITE:
-    https://github.com/erroneousboat/template		
+    https://github.com/jpbruinsslot/template		
 
 GLOBAL OPTIONS:
     -t, -template [template-file]     template file

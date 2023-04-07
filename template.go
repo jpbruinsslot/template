@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	VERSION = "0.2.0"
+	VERSION = "0.2.1"
 	USAGE   = `NAME: 
-    template - use environment variables in Go templates
+    template - use environment variables and data files (like .env) in Go templates
 
 USAGE:
     template -t [template-file] -o [output-file] -d [data-file]
@@ -33,9 +33,9 @@ EXAMPLES:
     $ template -t input.tpml -o output.txt -d data.json
     
     # Use stdin for template file
-    $ cat input.tmpl | template -o output.txt    # output txt file
-    $ cat input.tmpl | template -o -             # output to stdout
-    $ cat input.tmpl | template                  # output to stdout
+    $ cat input.tmpl | template -o output.txt                    # output txt file
+    $ cat input.tmpl | template -o -                             # output to stdout
+    $ cat input.tmpl | template                                  # output to stdout
     
     # Use stdin for data file
     $ cat data.env | template -t input.tmpl -o output.txt -d -  # output txt file
@@ -45,7 +45,7 @@ VERSION:
     %s
 
 WEBSITE:
-    https://github.com/erroneousboat/template		
+    https://github.com/jpbruinsslot/template		
 
 GLOBAL OPTIONS:
     -t, -template [template-file]    template file
